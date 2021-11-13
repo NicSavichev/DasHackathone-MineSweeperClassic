@@ -95,10 +95,10 @@ class Minefield
         while mines_left > 0u
             let x = uint(random_int(seed)) % w
             let y = uint(random_int(seed)) % h
-            var c& = cells[cellIndexU(x,y)]
-            if !c.flags.mined
+            let cell_idx = cellIndexU(x,y)
+            if !cells[cell_idx].flags.mined
                 mines_left --
-                c.flags |= MinefieldCellFlags mined
+                cells[cell_idx].flags |= MinefieldCellFlags mined
                 for yc in range(y > 0u ? y-1u : 0u, min(y+2u,h))
                     for xc in range(x > 0u ? x-1u : 0u, min(x+2u,w))
                         cells[cellIndex(xc,yc)].minesNear ++
@@ -203,25 +203,26 @@ class Minefield
     def finalizeSelection()
         if selCell == int2(-1,-1) || selType == 0
             return
-        var c& = cells[cellIndex(selCell.x, selCell.y)]
-        if selType == 1 && !c.flags.open && !c.flags.marked // open cell
+        let cell_idx = cellIndex(selCell.x, selCell.y)
+        let cflags = cells[cell_idx].flags
+        if selType == 1 && !cflags.open && !cflags.marked // open cell
             openCell(selCell.x, selCell.y)
 
-        elif selType == 2 && !c.flags.open && marksLeft > 0u // mark cell
-            marksLeft += c.flags.marked ? 1u : -1u
-            c.flags ^= MinefieldCellFlags marked;
+        elif selType == 2 && !cflags.open && marksLeft > 0u // mark cell
+            marksLeft += cflags.marked ? 1u : -1u
+            cells[cell_idx].flags ^= MinefieldCellFlags marked;
 
-        elif selType == 3 && c.flags.open // open "safe" cells around
+        elif selType == 3 && cflags.open // open "safe" cells around
             var num_marked: uint = 0u
             for yc in range(max(selCell.y-1, 0), min(selCell.y+2,int(h)))
                 for xc in range(max(selCell.x-1, 0), min(selCell.x+2,int(w)))
                     if getCell(xc, yc).flags.marked
                         num_marked ++
-            if num_marked == c.minesNear
+            if num_marked == cells[cell_idx].minesNear
                 for yc in range(max(selCell.y-1, 0), min(selCell.y+2,int(h)))
                     for xc in range(max(selCell.x-1, 0), min(selCell.x+2,int(w)))
-                        let flags = getCell(xc, yc).flags
-                        if !flags.open && !flags.marked
+                        let flags2 = getCell(xc, yc).flags
+                        if !flags2.open && !flags2.marked
                             openCell(xc, yc)
         clicksCount ++
 
@@ -230,12 +231,12 @@ class Minefield
         selCell = int2(-1,-1)
 
     def private openCell(x, y: int)
-        var c& = cells[cellIndex(x,y)]
-        c.flags |= MinefieldCellFlags open;
+        let cell_idx = cellIndex(x,y)
+        cells[cell_idx].flags |= MinefieldCellFlags open;
         hiddenCellsLeft --
-        if c.flags.mined
+        if cells[cell_idx].flags.mined
             gameOver = true
-        elif c.minesNear == 0u
+        elif cells[cell_idx].minesNear == 0u
             for yc in range(max(y-1, 0), min(y+2,int(h)))
                 for xc in range(max(x-1, 0), min(x+2,int(w)))
                     if !getCell(xc, yc).flags.open
